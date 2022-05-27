@@ -1,0 +1,33 @@
+name: Build
+on: [push]
+jobs:
+  build-with-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+      - uses: actions/cache@v3
+        id: npm-cache # use this to check for `cache-hit` ==> if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      # 查看缓存是否设置成功，输出 node_modules 目录
+      - name: Check Install/Build Cache
+        run: ls -lah node_modules | head -5
+
+      - name: Install Dependencies
+        # 如果命中 key，则直接跳过依赖安装
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: yarn
+      - name: Build Dependencies
+        run: npm run build
